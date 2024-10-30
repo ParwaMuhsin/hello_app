@@ -1,33 +1,26 @@
-import streamlit as st 
+import streamlit as st
 import pandas as pd
-import psycopg2
+from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Database connection settings
 DATABASE_HOST = "localhost"  # Update as needed
-DATABASE_PORT="5432"
+DATABASE_PORT = "5432"
 DATABASE_NAME = "faar"
 DATABASE_USER = "postgres"
-DATABASE_PASSWORD = "ashqy100"  # Replace with your actual password 
+DATABASE_PASSWORD = "ashqy100"  # Replace with your actual password  
 
-# Function to create a database connection
+# Function to create a database connection using SQLAlchemy
 def create_connection():
-    connection = psycopg2.connect(
-        host=DATABASE_HOST,
-        port=DATABASE_PORT,
-        database=DATABASE_NAME,
-        user=DATABASE_USER,
-        password=DATABASE_PASSWORD
-    
-    )
-    return connection
+    connection_string = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+    engine = create_engine(connection_string)
+    return engine
 
 # Function to fetch data from a specified query
 def fetch_data(query):
-    conn = create_connection()
-    df = pd.read_sql(query, conn)
-    conn.close()
+    engine = create_connection()
+    df = pd.read_sql(query, engine)
     return df
 
 # Function to create a SQL query based on a keyword
