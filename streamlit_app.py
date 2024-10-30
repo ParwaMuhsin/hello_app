@@ -1,39 +1,37 @@
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
+import psycopg2
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Database connection settings
-DATABASE_HOST = "localhost"  # Update as needed
-DATABASE_PORT = "5432"
-DATABASE_NAME = "faar"
-DATABASE_USER = "postgres"
-DATABASE_PASSWORD = "ashqy100"  # Replace with your actual password  
-
-# Function to create a database connection using SQLAlchemy
+@st.experimental_singleton
 def create_connection():
-    connection_string = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
-    engine = create_engine(connection_string)
-    return engine
+    return psycopg2.connect(
+        host="localhost",  # Update as needed
+        database="faar",  # Your database name
+        user="postgres",  # Your username
+        password="ashqy100"  # Replace with your actual password
+    )
 
 # Function to fetch data from a specified query
-def fetch_data(query):
-    engine = create_connection()
-    df = pd.read_sql(query, engine)
+def fetch_data(query, params=None):
+    conn = create_connection()
+    df = pd.read_sql(query, conn, params=params)
+    conn.close()
     return df
 
 # Function to create a SQL query based on a keyword
 def create_keyword_query(keyword):
-    query = f"""
+    query = """
     SELECT f.*, h.scientific_name, h.common_name
     FROM feature f
     JOIN host h ON f.host_id = h.host_id
-    WHERE h.scientific_name ILIKE '%{keyword}%'
-    OR h.common_name ILIKE '%{keyword}%'
-    OR f.name ILIKE '%{keyword}%'
+    WHERE h.scientific_name ILIKE %s
+    OR h.common_name ILIKE %s
+    OR f.name ILIKE %s
     """
-    return query
+    return query, (f'%{keyword}%', f'%{keyword}%', f'%{keyword}%')
 
 # Function to fetch views from the database
 def fetch_views():
@@ -62,33 +60,38 @@ table_name = st.sidebar.selectbox(
 query = f"SELECT * FROM {table_name};"
 data = fetch_data(query)
 st.subheader(f"{table_name.capitalize()} Data")
-st.write(data)
+if not data.empty:
+    st.write(data)
+else:
+    st.write("No data available for this table/view.")
 
 # Adding filters for specific tables
 if table_name == "feature":
     host_id = st.sidebar.number_input("Filter by Host ID", min_value=1, value=1)
     filtered_query = f"SELECT * FROM feature WHERE host_id = {host_id};"
     filtered_data = fetch_data(filtered_query)
+    
     st.subheader("Filtered Feature Data by Host ID")
-    st.write(filtered_data)
+    if not filtered_data.empty:
+        st.write(filtered_data)
 
-    # Adding visualization options
-    if st.sidebar.checkbox("Show Feature Count by Organism"):
-        if 'organism_id' in filtered_data.columns:
-            organism_counts = filtered_data['organism_id'].value_counts()
-            st.subheader("Feature Count by Organism")
-            st.bar_chart(organism_counts)
-        else:
-            st.warning("The 'organism_id' column does not exist in the filtered feature data.")
+        # Adding visualization options
+        if st.sidebar.checkbox("Show Feature Count by Organism"):
+            if 'organism_id' in filtered_data.columns:
+                organism_counts = filtered_data['organism_id'].value_counts()
+                st.subheader("Feature Count by Organism")
+                st.bar_chart(organism_counts)
+            else:
+                st.warning("The 'organism_id' column does not exist in the filtered feature data.")
 
-    if st.sidebar.checkbox("Show Feature Distribution by Organism"):
-        if 'organism_id' in filtered_data.columns:
-            st.subheader("Feature Distribution by Organism")
-            plt.figure(figsize=(10, 5))
-            sns.histplot(filtered_data['organism_id'], bins=20, kde=True)
-            st.pyplot(plt)
-        else:
-            st.warning("The 'organism_id' column does not exist in the filtered feature data.")
+        if st.sidebar.checkbox("Show Feature Distribution by Organism"):
+            if 'organism_id' in filtered_data.columns:
+                st.subheader("Feature Distribution by Organism")
+                plt.figure(figsize=(10, 5))
+                sns.histplot(filtered_data['organism_id'], bins=20, kde=True)
+                st.pyplot(plt)
+            else:
+                st.warning("The 'organism_id' column does not exist in the filtered feature data.")
 
 # User input for free-text search
 st.subheader("Search Database by Keyword")
@@ -98,8 +101,8 @@ keyword_input = st.text_input("Enter a keyword (e.g., 'chicken'): ")
 if st.button("Search"):
     if keyword_input:
         try:
-            keyword_query = create_keyword_query(keyword_input)
-            results = fetch_data(keyword_query)
+            keyword_query, params = create_keyword_query(keyword_input)
+            results = fetch_data(keyword_query, params)
             if not results.empty:
                 st.write(results)
             else:
@@ -127,6 +130,7 @@ if st.button("Execute Query"):
     else:
         st.write("Please enter a SQL query.")
 
+# Sidebar information
 st.sidebar.header("About")
 st.sidebar.text("This application allows you to explore data from the Development of Farm Animal Antibiotic Resistance (FAAR) Database.")
 st.sidebar.text("It specifically focuses on antibiotic resistance-related information and protein IDs in livestock animals.")
