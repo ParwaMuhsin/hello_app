@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Database connection settings
-DATABASE_HOST = "172.27.118.169"  # Update as needed
+DATABASE_HOST = "localhost"  # Update as needed
 DATABASE_NAME = "faar"
 DATABASE_USER = "postgres"
 DATABASE_PASSWORD = "ashqy100"  # Replace with your actual password 
