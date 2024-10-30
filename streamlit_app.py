@@ -6,6 +6,7 @@ import seaborn as sns
 
 # Database connection settings
 DATABASE_HOST = "localhost"  # Update as needed
+DATABASE_PORT="5432"
 DATABASE_NAME = "faar"
 DATABASE_USER = "postgres"
 DATABASE_PASSWORD = "ashqy100"  # Replace with your actual password 
@@ -14,9 +15,11 @@ DATABASE_PASSWORD = "ashqy100"  # Replace with your actual password
 def create_connection():
     connection = psycopg2.connect(
         host=DATABASE_HOST,
+        port=DATABASE_PORT,
         database=DATABASE_NAME,
         user=DATABASE_USER,
         password=DATABASE_PASSWORD
+    
     )
     return connection
 
