@@ -1,6 +1,5 @@
 streamlit
 sqlalchemy
-psycopg2-binary
 pandas
 matplotlib
 seaborn
